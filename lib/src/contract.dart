@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:near_api_flutter/near_api_flutter.dart';
 import 'package:near_api_flutter/src/constants.dart';
@@ -13,53 +12,7 @@ class Contract {
   String contractId;
   Account callerAccount; //account to sign change method transactions
 
-  int _accessKeyTasks = 0;
-  bool get _isAccessKeyBusy => _accessKeyTasks > 0;
-
-  late AccessKey _accessKey;
-
-  Contract(this.contractId, this.callerAccount) {
-    _refreshAccessKey();
-
-    Timer.periodic(const Duration(seconds: 15), (timer) {
-      if (_isAccessKeyBusy) {
-        return;
-      }
-
-      _refreshAccessKey(timer.tick);
-    });
-  }
-
-  void setCallerAccount(Account account) {
-    callerAccount = account;
-    return _refreshAccessKey();
-  }
-
-  void _refreshAccessKey([int? timerTick]) async {
-    _accessKey = await callerAccount.findAccessKey();
-
-    if (kDebugMode) {
-      final log = timerTick != null
-          ? {'nonce': _accessKey.nonce, 'tick': timerTick}
-          : {'nonce': _accessKey.nonce};
-    }
-  }
-
-  void _lockAccessKey() {
-    _accessKeyTasks++;
-  }
-
-  void _releaseAccessKey() {
-    _accessKeyTasks = max(_accessKeyTasks - 1, 0);
-  }
-
-  void _increaseNonce() {
-    _accessKey.nonce++;
-
-    if (kDebugMode) {
-      print('Increase nonce: ${_accessKey.nonce}!');
-    }
-  }
+  Contract(this.contractId, this.callerAccount);
 
   Future<Map<dynamic, dynamic>> callFunction(
     String functionName,
@@ -67,8 +20,7 @@ class Contract {
     double nearAmount = 0.0,
     int gasFees = Constants.defaultGas,
   ]) async {
-    _lockAccessKey();
-    _increaseNonce();
+    final accessKey = await callerAccount.findAccessKey();
 
     String publicKey =
         KeyStore.publicKeyToString(callerAccount.keyPair.publicKey);
@@ -82,7 +34,7 @@ class Contract {
       receiver: contractId,
       methodName: functionName,
       methodArgs: functionArgs,
-      accessKey: _accessKey,
+      accessKey: accessKey,
     );
 
     // Serialize Transaction
@@ -103,12 +55,8 @@ class Contract {
         TransactionManager.encodeSerialization(serializedSignedTransaction);
 
     // Broadcast Transaction
-    final resp =
-        await callerAccount.provider.broadcastTransaction(encodedTransaction);
-
-    _releaseAccessKey();
-
-    return resp;
+    return await callerAccount.provider
+        .broadcastTransaction(encodedTransaction);
   }
 
   Future<Map<dynamic, dynamic>> callFunctionWithDeposit(
@@ -121,8 +69,7 @@ class Contract {
     approvalURL, [
     int gasFees = Constants.defaultGas,
   ]) async {
-    _lockAccessKey();
-    _increaseNonce();
+    final accessKey = await callerAccount.findAccessKey();
 
     String publicKey =
         KeyStore.publicKeyToString(callerAccount.keyPair.publicKey);
@@ -136,7 +83,7 @@ class Contract {
       receiver: contractId,
       methodName: methodName,
       methodArgs: methodArgs,
-      accessKey: _accessKey,
+      accessKey: accessKey,
     );
 
     // Serialize Transaction
@@ -148,8 +95,6 @@ class Contract {
         TransactionManager.encodeSerialization(serializedTransaction);
     wallet.requestDepositApproval(
         transactionEncoded, successURL, failureURL, approvalURL);
-
-    _releaseAccessKey();
 
     return {"Result": "Please follow wallet to approve transaction"};
   }
