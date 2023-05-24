@@ -21,6 +21,7 @@ class Contract {
     int gasFees = Constants.defaultGas,
   ]) async {
     final accessKey = await callerAccount.findAccessKey();
+    accessKey.nonce++;
 
     String publicKey =
         KeyStore.publicKeyToString(callerAccount.keyPair.publicKey);
@@ -70,6 +71,7 @@ class Contract {
     int gasFees = Constants.defaultGas,
   ]) async {
     final accessKey = await callerAccount.findAccessKey();
+    accessKey.nonce++;
 
     String publicKey =
         KeyStore.publicKeyToString(callerAccount.keyPair.publicKey);
