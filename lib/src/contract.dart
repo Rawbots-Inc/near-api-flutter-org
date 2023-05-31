@@ -10,11 +10,11 @@ import 'package:near_api_flutter/src/transaction_api/transaction_manager.dart';
 /// Represents a contract entity: contractId, view methods, and change methods
 class Contract {
   String contractId;
-  Account callerAccount; //account to sign change method transactions
 
-  Contract(this.contractId, this.callerAccount);
+  Contract(this.contractId);
 
   Future<Map<dynamic, dynamic>> callFunction(
+    Account callerAccount,
     String functionName,
     String functionArgs, [
     double nearAmount = 0.0,
@@ -61,6 +61,7 @@ class Contract {
   }
 
   Future<Map<dynamic, dynamic>> callFunctionWithDeposit(
+    Account callerAccount,
     String methodName,
     String methodArgs,
     Wallet wallet,
@@ -102,15 +103,15 @@ class Contract {
   }
 
   /// Calls contract view functions
-  Future<Map<dynamic, dynamic>> callViewFuntion(
+  Future<Map<dynamic, dynamic>> callViewFuntion(RPCProvider provider,
       String methodName, String methodArgs, int? blockId) async {
     List<int> bytes = utf8.encode(methodArgs);
     String base64MethodArgs = base64.encode(bytes);
-    return await callerAccount.provider
-        .callViewFunction(contractId, methodName, base64MethodArgs, blockId);
+    return await provider.callViewFunction(
+        contractId, methodName, base64MethodArgs, blockId);
   }
 
-  Future<Map<dynamic, dynamic>> callBlockFuntion() async {
-    return await callerAccount.provider.callBlockFunction(contractId);
+  Future<Map<dynamic, dynamic>> callBlockFuntion(RPCProvider provider) async {
+    return await provider.callBlockFunction(contractId);
   }
 }
